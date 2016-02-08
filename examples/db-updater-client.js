@@ -1,6 +1,8 @@
+"use strict";
+
 var zmq = require("zmq");
 var bunyan = require('bunyan');
-var log = bunyan.createLogger({name: 'kga-web/db-updater'});
+var log = bunyan.createLogger({name: module.filename});
 var endpoint = process.env.ENDPOINTS_DBUPDATER;
 
 var requester = zmq.socket('req');

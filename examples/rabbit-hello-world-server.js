@@ -1,6 +1,8 @@
+"use strict";
+
 var amqp = require('amqplib/callback_api');
 var bunyan = require('bunyan');
-var log = bunyan.createLogger({name: 'kga-web/hello-world-client'});
+var log = bunyan.createLogger({name: module.filename});
 var endpoint = "amqp://localhost";
 
 amqp.connect(endpoint, function(err, connection){
@@ -15,9 +17,20 @@ amqp.connect(endpoint, function(err, connection){
       }
       var queueName = 'helloWorld';
       channel.assertQueue(queueName, { durable:false });
-      channel.consume(queueName, function(message){
-        log.info('[x] Message received',{ message: message.content.toString()});
-      }, { noAck:true });
+      channel.consume(queueName, messageReceived, { noAck:true });
       log.info('[x] Registered on queue', queueName);
     });
 });
+
+function messageReceived(message) {
+  try {
+    var messageData = JSON.parse(message.content.toString());
+    log.info('Message received:',messageData);
+  } catch (parseException) {
+    log.error('Error during message parsing',{
+      error: parseException,
+      text:  message.content.toString(),
+      message: message
+    });
+  }
+}

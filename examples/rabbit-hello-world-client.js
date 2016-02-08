@@ -1,125 +1,76 @@
+"use strict";
+/*
+ * Require section, all required modules are listed here
+ */
 var amqp = require('amqplib');
 var bunyan = require('bunyan');
-var log = bunyan.createLogger({name: 'kga-web/hello-world-client'});
 var when = require('when');
 
-var queueName = 'helloWorld';
+/*
+ * Set up global variables / settings
+ */
+
+var log = bunyan.createLogger({name: module.filename});
+var options = {
+  queueName: 'helloWorld',
+  numberOfMessages: -1, // negative values for unlimited number of messages
+  randomTimeout: 1000 // 0 = send as fast as possible, >0 wait up to n milliseconds
+};
+var unconfirmedCounter = 0;
+var allMessagesSent = false;
 
 function cleanUpAndExit(connection) {
   // all messages maybe sent
   log.info("Suspect we're done.. Shutting down");
-  setTimeout(function(){
     var okClose = connection.close()
-    log.info(okClose);
     okClose.then(function(){
       log.info("Connection close returned");
       process.exit(0)
     });
-  },500);
 };
 
 
 var ok = amqp.connect();
 ok.then(function(connection) {
-  var ok = connection.createChannel();
+  var ok = connection.createConfirmChannel();
   ok.then(function(channel){
-    connection.createChannel().then(function(channel){
-      channel.assertQueue(queueName, {durable:false});
-      var lastReturn = false;
-      for( var counter = 1; counter <= 10000; counter++) {
-        lastReturn = channel.publish('',queueName,new Buffer('Hello World!' + counter));
-      };
-
-      log.info("Sent all messages", { lastReturn: lastReturn });
-      if (lastReturn) {
-        cleanUpAndExit(connection);
-      } else {
-        channel.on('drain', function() { cleanUpAndExit(connection) });
-      }
-    });
+    channel.assertQueue(options.queueName, {durable:false});
+    sendMessages(0, connection, channel);
   });
 });
 
+function sendMessages(counter, connection, channel) {
+  counter++;
+  log.info("Send message number", counter);
 
-/*
+  var messageJSON = JSON.stringify({ message: 'Hello World', counter: counter});
 
+  channel.publish('',options.queueName,new Buffer(messageJSON),{}, ackHandler);
+  unconfirmedCounter++;
 
+  if(counter === options.numberOfMessages) {
+    // exit loop, stop sending
+    allMessagesSent = true;
+    return;
+  }
 
-      function(err, channel){
-      if(err) {
-        log.error('Channel could not be created', { error: err });
-        process.exit(1);
-      }
+  // schedule next message to be sent
+  if(options.randomTimeout === 0) {
+    setImmediate(function () {sendMessages(counter, connection, channel);});
+  } else {
+    let randomTimeout = Math.floor(Math.random() * options.randomTimeout);
+    log.info("Waiting", randomTimeout, "ms until next message");
+    setTimeout(function() {sendMessages(counter, connection, channel);},randomTimeout);
+  }
 
-      channel.assertQueue(queueName, { durable:false });
-      var lastPublishReturn;
-      for( var counter = 0; counter < 10000; counter++) {
-        lastPublishReturn = sendMessage(channel, 'Hello World!' + counter);
-      };
-
-      var cleanUpAndExit = function() {
-        log.info("Suspect we're done.. Shutting down");
-        log.info(connection.close());
-      };
-
-      if (lastPublishReturn) {
-        // immediately exit, all Sent
-        cleanUpAndExit();
-      } else {
-        // register exit for when the channel has been flushed
-
-      }
-
-
-
-  });
-}
-
-
-*/
-/*
-process.on('SIGINT', function() {
-  log.info('Received SIGINT, closing shop');
-  _connection.close();
-  setTimeout(function () {process.exit(0)},1000);
-})
-*//*
-var connectPromise = amqp.connect();
-connectPromise.then(function(err, connection){
-    _connection = connection;
-    if(err) {
-      log.error('Connection could not be created', { destination: endpoint, error: err });
-      process.exit(1);
+  // Handler function for message acknowledgements
+  function ackHandler(err) {
+    unconfirmedCounter--;
+    log.info("Ack received", { err: err, unconfirmedCounter: unconfirmedCounter});
+    if (unconfirmedCounter === 0 && allMessagesSent) {
+      log.info("Last message sent and acked(?), quitting...");
+      cleanUpAndExit(connection);
     }
-    connection.createChannel(function(err, channel){
-      if(err) {
-        log.error('Channel could not be created', { error: err });
-        process.exit(1);
-      }
+  }
 
-      channel.assertQueue(queueName, { durable:false });
-      var lastPublishReturn;
-      for( var counter = 0; counter < 10000; counter++) {
-        lastPublishReturn = sendMessage(channel, 'Hello World!' + counter);
-      };
-
-      var cleanUpAndExit = function() {
-        log.info("Suspect we're done.. Shutting down");
-        log.info(connection.close());
-      };
-
-      if (lastPublishReturn) {
-        // immediately exit, all Sent
-        cleanUpAndExit();
-      } else {
-        // register exit for when the channel has been flushed
-        channel.on('drain', cleanUpAndExit);
-      }
-    });
-});
-
-function sendMessage(channel, text) {
-  return channel.sendToQueue(queueName, new Buffer(text));
-  //log.info('[x] Sent Message:', text);
 };
-*/
