@@ -7,7 +7,7 @@ var Studygroup = require('../model/Studygroup');
 describe('Student',function() {
   it('new Student should have an id',function() {
     var student = new Student('1');
-    expect(student.getId()).to.equal('1');
+    expect(student.id).to.equal('1');
   });
 });
 
@@ -54,6 +54,13 @@ describe('Studygroup',function() {
     var studygroup = new Studygroup(1,"Gruppe 1");
     studygroup.setSizeLimit(2);
     expect(studygroup.sizeLimit).to.equal(2);
+  });
+
+  it('A studygroup with a size limit of one should return isFull after adding one student',function() {
+    var studygroup = new Studygroup(1,"Gruppe 1");
+    studygroup.setSizeLimit(1);
+    studygroup.addMember(new Student('1'));
+    expect(studygroup.isFull()).to.be.true;
   });
 
   it('A studygroup with a size limit of two should return isFull after adding two students',function() {

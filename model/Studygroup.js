@@ -18,7 +18,7 @@ Studygroup.prototype.addMember = function(aStudent) {
   if(this.isFull()) {
     throw new Error('Group is already full, adding new student not possible');
   }
-  this.members[aStudent.getId()] = aStudent;
+  this.members[aStudent.id] = aStudent;
 }
 
 Studygroup.prototype.size = function() {
