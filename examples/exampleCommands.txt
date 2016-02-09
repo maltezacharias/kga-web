@@ -1,0 +1,17 @@
+{
+  "command" : "addGroup",
+  "number": 2,
+  "identifier": "Kleingruppe 2",
+  "sizeLimit": 2,
+  "uuid": "cea54562-d954-41fd-8290-fb045f0829cf"
+}
+
+{
+  "command": "listGroups"
+}
+
+{
+  "command":  "addStudentToGroup",
+  "groupId":  "cea54562-d954-41fd-8290-fb045f0829cf",
+  "studentId": "1542402"
+}

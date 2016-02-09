@@ -1,60 +1,47 @@
 "use strict";
 var _ = require("underscore");
-var globalMemory = require("./globalMemory");
-var Studygroup = require("../model/Studygroup");
-var Student = require("../model/Student");
+var Commands = require("./MessageHandlerCommands");
 
-var MessageHandler = function() {
-
+var MessageHandler = function(globalMemory) {
+  this.commands.globalMemory = globalMemory;
 };
 
-MessageHandler.prototype.commands = {};
+MessageHandler.prototype.commands = new Commands();
 MessageHandler.prototype.process = function(message, callback) {
   if(!message.command) {
     throw new Error("invalid message received, command argument missing");
   }
 
   if(!_.has(this.commands, message.command)) {
-    var exception = new Error("Command unknown");
+    var exception = new Error('Command ' + message.command + ' unknown');
     exception.command = message.command;
     throw exception;
   }
 
-  this.commands[message.command](message, callback);
+  this.executeCommand(message.command, message, callback);
+
 }
 
-MessageHandler.prototype.commands.listGroups = function(message, callback) {
-  callback(null,{groups: _.toArray(globalMemory.studygroups)});
+MessageHandler.prototype.executeCommand = function(commandName, message, callback) {
+  var command = this.commands[commandName];
+  var suppliedParameters = _.without(_.keys(message),'command');
+  var requiredParameters = Array.from(command.requiredParameters);
+  var optionalParameters = Array.from(command.optionalParameters);
+
+  var missingParameters = _.difference(requiredParameters,suppliedParameters);
+  var unknownParameters = _.difference(suppliedParameters,requiredParameters,optionalParameters);
+
+  if(missingParameters.length > 0 || unknownParameters.length > 0) {
+    throw new Error('Command Invocation Error, required Arguments for command '
+                      + commandName
+                      + ' missing: ['
+                      + missingParameters.join()
+                      + '], unknown Arguments supplied: ['
+                      + unknownParameters.join()
+                      + ']');
+  }
+  command.call(this.commands, message, callback);
 }
 
-MessageHandler.prototype.commands.addGroup = function(message, callback) {
-  if(!message.number || !message.identifier) {
-    throw new Error("number and identifier are required to create a group");
-  }
-  var newStudygroup = new Studygroup(message.number, message.identifier);
-  if(message.sizeLimit) {
-    newStudygroup.sizeLimit = message.sizeLimit;
-  };
-  globalMemory.add(newStudygroup);
-  callback(null,{});
-}
-
-MessageHandler.prototype.commands.addStudentToGroup = function(message,callback) {
-  if(!message.studentId || !message.groupId) {
-    throw new Error("student and group ID are required to add a student to a group");
-  }
-  if (!_.has(globalMemory.studygroups,message.groupId)) {
-    callback('Group ID '+ message.groupId +' unknown');
-    return;
-  }
-
-  var group = globalMemory.studygroups[message.groupId];
-  if(group.isFull()) {
-    callback('Group ID '+ message.groupId +' is already full');
-    return;
-  }
-  group.addMember(new Student(message.studentId));
-  callback(null,{});
-}
 
 module.exports = MessageHandler;

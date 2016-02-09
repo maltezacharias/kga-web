@@ -1,9 +1,11 @@
 "use strict";
 
 var _ = require('underscore');
+var uuid = require('node-uuid');
 
 function Studygroup(number, identifier, members) {
   var _this = this;
+  this.uuid = uuid.v4();
   this.number = number;
   this.identifier = identifier;
   this.members = {};
