@@ -15,12 +15,18 @@ function DummyAuthenticator() {
       subject: user,
     };
 
-    var ticketPayload = {
-      roles: ['administrator','student']
-    };
+    var ticketPayload;
 
     if (user === 'error') {
       return callback('Authentication not sucessful');
+    } else if (user === 'admin') {
+      ticketPayload = {
+        roles: ['administrator','student']
+      };
+    } else {
+      ticketPayload = {
+        roles: ['student']
+      };
     }
     jwt.sign(ticketPayload, 'secret', ticketOptions, function (newTicket){ return callback(null, newTicket); });
   }
