@@ -18,7 +18,7 @@ function DummyAuthenticator() {
     var ticketPayload;
 
     if (user === 'error') {
-      return callback('Authentication not sucessful');
+      return callback(new Error('Forced error for user error: Authentication not sucessful'));
     } else if (user === 'admin') {
       ticketPayload = {
         roles: ['administrator','student']

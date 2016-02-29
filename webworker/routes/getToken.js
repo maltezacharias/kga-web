@@ -13,11 +13,15 @@ module.exports = function(app, route) {
     authenticator.authenticate(username,authenticationCallback);
     function authenticationCallback(err, token) {
         if(err) {
-          var err = new Error(err);
-          err.status = 403;
-          next(err);
+          res.json({
+            success: false,
+            message: err.message
+          });
         } else {
-          res.send(token);
+          res.json({
+            success: true,
+            token: token
+          });
         }
     }
 
